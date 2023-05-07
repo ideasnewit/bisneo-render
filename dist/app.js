@@ -62,6 +62,7 @@ app.use(session({
 }));
 app.use("/static", express.static(path.join(__dirname, "", "web", "static")));
 app.use("/assets", express.static(path.join(__dirname, "", "web", "assets")));
+app.use("/favicon", express.static(path.join(__dirname, "", "web", "favicon")));
 app.use("/api/v1", router);
 // serve react build
 app.get("*", (req, res) => {
