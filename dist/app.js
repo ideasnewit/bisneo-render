@@ -9,7 +9,7 @@ import * as http from "http";
 import dotenv from "dotenv";
 import cors from "cors";
 import { router } from "./api/routes/index.js";
-import { normalizePort, onError, onListening, errorHandler, handle404 } from "./appHelper.js";
+import { normalizePort, onError, onListening, errorHandler, handle404, } from "./appHelper.js";
 import db from "./models/index.js";
 export const app = express();
 export const port = normalizePort(process.env.PORT || "5000");
@@ -55,12 +55,13 @@ app.use(session({
     cookie: {
         httpOnly: true,
         sameSite: true,
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000,
     },
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
 }));
 app.use("/static", express.static(path.join(__dirname, "", "web", "static")));
+app.use("/assets", express.static(path.join(__dirname, "", "web", "assets")));
 app.use("/api/v1", router);
 // serve react build
 app.get("*", (req, res) => {
