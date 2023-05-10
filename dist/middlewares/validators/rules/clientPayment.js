@@ -46,6 +46,21 @@ export const clientPaymentRules = {
             .isDate()
             .withMessage("Date must be a valid date"),
     ],
+    requestFreeAccess: [
+        body("clientId")
+            .trim()
+            .escape()
+            .notEmpty()
+            .withMessage("Client Id is required")
+            .bail()
+            .custom(async (id) => {
+            const client = await Client.findByPk(id);
+            if (client === null) {
+                throw new Error("Client not found");
+            }
+            return true;
+        }),
+    ],
     read: [read("ClientPayment")],
     destroy: [
         destroy("ClientPayment", async (pk) => await ClientPayment.findByPk(pk)),

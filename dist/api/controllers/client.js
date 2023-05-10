@@ -187,10 +187,10 @@ async function pay(req, res, next) {
             });
             if (clientPayment.dataValues) {
                 // activeTill = Get current activeTill and check if it is less thean or equal to current date the current date + duration (in months) else activeTIll + duration
+                let activeTill = moment(client.dataValues?.activeTill);
+                activeTill = activeTill.add(1, "months").toDate();
                 let [affectedRows] = await Client.update({
-                    activeTill: moment(client.dataValues?.activeTill)
-                        .add(1, "months")
-                        .toDate(),
+                    activeTill: activeTill,
                     updatedBy: reqUser,
                 }, { where: { id: clientId } });
                 return res.status(201).json({ clientPayment });
@@ -235,4 +235,32 @@ async function payments(req, res, next) {
         next({ status: 500, error: "Db error getting payments" });
     }
 }
-export { clients, create, read, update, destroy, pay, payments };
+async function requestFreeAccess(req, res, next) {
+    try {
+        const { clientId } = req.body;
+        const reqUser = req.headers["user-id"]
+            ? req.headers["user-id"].toString()
+            : "";
+        const client = await Client.findByPk(clientId);
+        if (client === null) {
+            return res.status(400).json({
+                error: "Client not found",
+            });
+        }
+        else {
+            let activeTill = moment(client.dataValues?.activeTill);
+            activeTill = activeTill.add(1, "months").toDate();
+            let [affectedRows] = await Client.update({
+                activeTill: activeTill,
+                updatedBy: reqUser,
+            }, { where: { id: clientId } });
+            const updatedClient = await Client.findByPk(clientId);
+            return res.status(201).json({ client: updatedClient });
+        }
+    }
+    catch (error) {
+        console.log("\n\nError requesting free access: ", error, "\n\n");
+        next({ status: 500, error: "Db error requesting free access" });
+    }
+}
+export { clients, create, read, update, destroy, pay, payments, requestFreeAccess, };

@@ -6,10 +6,21 @@ const QueryTypes = Sequelize.QueryTypes;
 const { sequelize, Supplier, Purchase, Sale, SaleProduct, AmountReceived, Product, Category, Customer, } = db;
 async function summary(req, res, next) {
     try {
-        const customerCount = await Customer.count();
-        const supplierCount = await Supplier.count();
-        const purchaseCount = await Purchase.count();
-        const salesCount = await Sale.count();
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const customerCount = await Customer.count({
+            where: { clientId },
+        });
+        const supplierCount = await Supplier.count({
+            where: { clientId },
+        });
+        const purchaseCount = await Purchase.count({
+            where: { clientId },
+        });
+        const salesCount = await Sale.count({
+            where: { clientId },
+        });
         return res.status(200).json({
             customers: customerCount,
             suppliers: supplierCount,
@@ -248,6 +259,9 @@ async function stockCount(req, res, next) {
 }
 async function pendingBills(req, res, next) {
     try {
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
         const { filter, pagination } = res.locals;
         let sales = await sequelize.query(
         //   'select (((select sum(quantity * "unitPrice") as "TotalAmount" from public."saleProducts" as p where p."saleId" = s.id) + s."loadingCharge" + s."unLoadingCharge" + s."transportCharge" + s."tax") - s.discount) as TotalAmount,  (select sum(amount) as "AmountReceived" from public."amountReceived" as a where a."saleId" = s.id) as amountReceived,* from public.sales as s where ((select sum(amount) as "AmountReceived" from public."amountReceived" as a where a."saleId" = s.id) < (((select sum(quantity * "unitPrice") as "TotalAmount" from public."saleProducts" as p where p."saleId" = s.id) + s."loadingCharge" + s."unLoadingCharge" + s."transportCharge" + s."tax") - s.discount))',
@@ -262,7 +276,7 @@ async function pendingBills(req, res, next) {
     s."date" as "date",
     s."discount" as "discount"
     from public.sales as s left outer join public."customers" as c on s."customerId" = c."id"
-    where ((select sum(amount) as "amountReceived" from public."amountReceived" as a where a."saleId" = s.id) < (((select sum(quantity * "unitPrice") as "TotalAmount" from public."saleProducts" as p where p."saleId" = s.id) + s."loadingCharge" + s."unLoadingCharge" + s."transportCharge" + s."tax") - s.discount))`, { type: QueryTypes.SELECT });
+    where s.clientId = '${clientId}' and ((select sum(amount) as "amountReceived" from public."amountReceived" as a where a."saleId" = s.id) < (((select sum(quantity * "unitPrice") as "TotalAmount" from public."saleProducts" as p where p."saleId" = s.id) + s."loadingCharge" + s."unLoadingCharge" + s."transportCharge" + s."tax") - s.discount))`, { type: QueryTypes.SELECT });
         if (sales && sales.length > 0) {
             pagination.count = sales.length;
             sales = sales.map((s) => ({
@@ -284,6 +298,9 @@ async function pendingBills(req, res, next) {
 }
 async function outOfStockProducts(req, res, next) {
     try {
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
         const { filter, pagination } = res.locals;
         const { count, rows } = await Product.findAndCountAll({
             include: {
@@ -291,6 +308,7 @@ async function outOfStockProducts(req, res, next) {
                 as: "category",
             },
             where: {
+                clientId,
                 store: 0,
                 counter: 0,
             },
@@ -313,14 +331,16 @@ async function outOfStockProducts(req, res, next) {
 }
 async function topSellingProducts(req, res, next) {
     try {
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
         let { limit } = req.query;
         const { filter, pagination } = res.locals;
         let resultLimit = 10;
         if (limit && limit.length) {
             resultLimit = parseInt(limit.toString());
         }
-        const products = await sequelize.query('SELECT sp."productId" as "id", (SELECT p."name" FROM public."products" as "p" where p."id" = sp."productId") as "name", CAST(SUM(sp."quantity") AS INT) AS "total" FROM public."saleProducts" as "sp" GROUP BY "productId" ORDER BY "total" DESC LIMIT ' +
-            resultLimit, { type: QueryTypes.SELECT });
+        const products = await sequelize.query(`SELECT sp."productId" as "id", (SELECT p."name" FROM public."products" as "p" where p."id" = sp."productId") as "name", CAST(SUM(sp."quantity") AS INT) AS "total" FROM public."saleProducts" as "sp" where sp.clientId = '${clientId}' GROUP BY sp."productId" ORDER BY "total" DESC LIMIT ${resultLimit}`, { type: QueryTypes.SELECT });
         if (products && products.length > 0) {
             pagination.count = products.length;
             return res.status(200).json({ count: products.length, products });
@@ -338,6 +358,9 @@ async function topSellingProducts(req, res, next) {
 }
 async function topBuyingCustomers(req, res, next) {
     try {
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
         let { limit } = req.query;
         const { filter, pagination } = res.locals;
         let resultLimit = 10;
@@ -349,6 +372,7 @@ async function topBuyingCustomers(req, res, next) {
       (select c."name" from "customers" as "c" where c."id" = s."customerId") as "name",
       (select c."phone" from "customers" as "c" where c."id" = s."customerId") as "phone"
       from public.sales as s 
+      where s.clientId = '${clientId}' 
       group by s."customerId" order by s."count" desc limit ${resultLimit}`, { type: QueryTypes.SELECT });
         if (customers && customers.length > 0) {
             pagination.count = customers.length;
