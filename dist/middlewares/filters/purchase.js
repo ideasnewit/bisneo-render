@@ -3,7 +3,7 @@ import processFilters from "./processFilters.js";
 import moment from "moment";
 const Op = Sequelize.Op;
 export function purchase(req, res, next) {
-    const { supplierId, billNumber, product, fromDate, toDate } = req.query;
+    const { supplierId, billNumber, product, fromDate, toDate, createdBy } = req.query;
     const conditions = [];
     if (supplierId) {
         conditions.push({
@@ -35,6 +35,11 @@ export function purchase(req, res, next) {
             date: {
                 [Op.lte]: moment(toDate.toString()).add(1, "days").format("YYYY-MM-DD"),
             },
+        });
+    }
+    if (createdBy) {
+        conditions.push({
+            createdBy: createdBy,
         });
     }
     processFilters(req, res, next, conditions);

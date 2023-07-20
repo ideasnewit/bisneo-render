@@ -26,7 +26,7 @@ export const UserFactory = (sequelize) => {
         },
         userName: {
             type: DataTypes.STRING,
-            unique: true,
+            // unique: true,
             allowNull: false,
         },
         password: {
@@ -41,7 +41,7 @@ export const UserFactory = (sequelize) => {
         },
         phone: {
             type: DataTypes.STRING(10),
-            unique: true,
+            // unique: true,
             allowNull: false,
         },
         email: {
@@ -76,5 +76,17 @@ export const UserFactory = (sequelize) => {
     }, {
         tableName: "users",
         sequelize,
+        indexes: [
+            {
+                name: "user_username_unique_index",
+                unique: true,
+                fields: ["clientId", "userName"],
+            },
+            {
+                name: "user_phone_unique_index",
+                unique: true,
+                fields: ["clientId", "phone"],
+            },
+        ],
     });
 };

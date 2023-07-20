@@ -29,3 +29,9 @@ router
 router
     .route("/topbuyingcustomers")
     .get(productRules.filter, validate, filter.product, reportsController.topBuyingCustomers);
+router
+    .route("/topsellingusers")
+    .get(productRules.filter, validate, filter.product, reportsController.topSellingUsers);
+router
+    .route("/topbuyingusers")
+    .get(productRules.filter, validate, filter.product, reportsController.topBuyingUsers);

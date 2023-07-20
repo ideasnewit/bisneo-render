@@ -5,6 +5,9 @@ import { validate } from "../../middlewares/validators/validate.js";
 import filter from "../../middlewares/filters/index.js";
 export const router = express.Router();
 router
+    .route("/:id")
+    .get(userPaymentRules.read, validate, userController.readPayment);
+router
     .route("/")
     .get(userPaymentRules.filter, validate, filter.userPayment, userController.payments)
     .patch(userPaymentRules.update, validate, userController.editPayment)

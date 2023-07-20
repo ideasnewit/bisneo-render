@@ -26,7 +26,10 @@ const commonRules = [
         .withMessage("User Name must be between 2 and 50 characters")
         .bail()
         .custom(async (userName, { req }) => {
-        const user = await User.findOne({ where: { userName } });
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const user = await User.findOne({ where: { clientId, userName } });
         if (itemExists(user, req.body.id)) {
             return Promise.reject("A user with this user name already exists");
         }
@@ -50,14 +53,17 @@ const commonRules = [
         .trim()
         .notEmpty()
         .withMessage("User's phone number is required")
-        .isLength({ min: 10, max: 15 })
+        .isLength({ min: 10, max: 10 })
         .withMessage("A phone number must be 10 characters long")
         .isInt()
         .withMessage("A phone number must be numerical")
         .bail()
         .custom(async (phone, { req }) => {
-        const supplier = await User.findOne({ where: { phone } });
-        if (itemExists(supplier, req.body.id)) {
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const user = await User.findOne({ where: { clientId, phone } });
+        if (itemExists(user, req.body.id)) {
             return Promise.reject("A user with this phone number already exists");
         }
         return true;
@@ -73,8 +79,11 @@ const commonRules = [
         .toLowerCase()
         .bail()
         .custom(async (email, { req }) => {
-        const supplier = await User.findOne({ where: { email } });
-        if (itemExists(supplier, req.body.id)) {
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const user = await User.findOne({ where: { clientId, email } });
+        if (itemExists(user, req.body.id)) {
             return Promise.reject("A user with this email address already exists");
         }
         return true;
@@ -169,7 +178,10 @@ export const userRules = {
             .withMessage("User Name must be between 2 and 50 characters")
             .bail()
             .custom(async (userName, { req }) => {
-            const user = await User.findOne({ where: { userName } });
+            const clientId = req.headers && req.headers["client-id"]
+                ? req.headers["client-id"].toString()
+                : "";
+            const user = await User.findOne({ where: { clientId, userName } });
             if (itemExists(user, req.body.id)) {
                 return Promise.reject("A user with this user name already exists");
             }
@@ -185,8 +197,11 @@ export const userRules = {
             .withMessage("A phone number must be numerical")
             .bail()
             .custom(async (phone, { req }) => {
-            const supplier = await User.findOne({ where: { phone } });
-            if (itemExists(supplier, req.body.id)) {
+            const clientId = req.headers && req.headers["client-id"]
+                ? req.headers["client-id"].toString()
+                : "";
+            const user = await User.findOne({ where: { clientId, phone } });
+            if (itemExists(user, req.body.id)) {
                 return Promise.reject("A user with this phone number already exists");
             }
             return true;
@@ -202,8 +217,11 @@ export const userRules = {
             .toLowerCase()
             .bail()
             .custom(async (email, { req }) => {
-            const supplier = await User.findOne({ where: { email } });
-            if (itemExists(supplier, req.body.id)) {
+            const clientId = req.headers && req.headers["client-id"]
+                ? req.headers["client-id"].toString()
+                : "";
+            const user = await User.findOne({ where: { clientId, email } });
+            if (itemExists(user, req.body.id)) {
                 return Promise.reject("A user with this email address already exists");
             }
             return true;

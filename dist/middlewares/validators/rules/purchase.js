@@ -72,12 +72,12 @@ export const purchaseRules = {
     filter: [
         queryWithFilter("supplier", async (supplierName) => await Supplier.findAll({
             where: {
-                name: { [Op.like]: `%${supplierName}%` }
+                name: { [Op.iLike]: `%${supplierName}%` }
             }
         })),
         queryWithFilter("product", async (productName) => await Product.findAll({
             where: {
-                name: { [Op.like]: `%${productName}%` }
+                name: { [Op.iLike]: `%${productName}%` }
             }
         })),
         ...filters,

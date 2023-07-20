@@ -51,7 +51,7 @@ async function sales(req, res, next) {
 }
 async function create(req, res) {
     try {
-        const { products, discount, tax, loadingCharge, unLoadingCharge, transportCharge, amountReceived, date, customerId, } = req.body;
+        const { products, discount, tax, loadingCharge, unLoadingCharge, transportCharge, amountReceived, date, paymentType, saleType, customerId, } = req.body;
         const clientId = req.headers["client-id"]
             ? req.headers["client-id"].toString()
             : "";
@@ -121,6 +121,8 @@ async function create(req, res) {
                 unLoadingCharge,
                 transportCharge,
                 date,
+                paymentType,
+                saleType,
                 customerId,
                 createdBy: reqUser,
                 updatedBy: reqUser,
@@ -316,7 +318,7 @@ async function read(req, res, next) {
 }
 async function update(req, res) {
     try {
-        const { id, discount, tax, loadingCharge, unLoadingCharge, transportCharge, date, customerId, } = req.body;
+        const { id, discount, tax, loadingCharge, unLoadingCharge, transportCharge, paymentType, saleType, date, customerId, } = req.body;
         const reqUser = req.headers["user-id"]
             ? req.headers["user-id"].toString()
             : "";
@@ -361,6 +363,8 @@ async function update(req, res) {
                 unLoadingCharge,
                 transportCharge,
                 date,
+                paymentType,
+                saleType,
                 customerId,
                 updatedBy: reqUser,
             }, {

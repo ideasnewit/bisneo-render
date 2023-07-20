@@ -3,7 +3,7 @@ import processFilters from "./processFilters.js";
 import moment from "moment";
 const Op = Sequelize.Op;
 export function stockHistory(req, res, next) {
-    const { productId, fromDate, toDate } = req.query;
+    const { productId, fromDate, toDate, location } = req.query;
     const conditions = [];
     if (productId) {
         conditions.push({
@@ -20,6 +20,11 @@ export function stockHistory(req, res, next) {
             date: {
                 [Op.lte]: moment(toDate.toString()).add(1, "days").format("YYYY-MM-DD"),
             },
+        });
+    }
+    if (location) {
+        conditions.push({
+            location: location,
         });
     }
     processFilters(req, res, next, conditions);

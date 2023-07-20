@@ -95,6 +95,14 @@ export const SaleFactory = (sequelize) => {
             allowNull: false,
             defaultValue: new Date(),
         },
+        paymentType: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        saleType: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
     }, {
         tableName: "sales",
         sequelize,

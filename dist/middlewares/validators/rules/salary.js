@@ -11,7 +11,7 @@ export const salaryRules = {
     filter: [
         queryWithFilter("user", async (name) => await User.findAll({
             where: {
-                name: { [Op.like]: `%${name}%` },
+                name: { [Op.iLike]: `%${name}%` },
             },
         })),
         ...filters,

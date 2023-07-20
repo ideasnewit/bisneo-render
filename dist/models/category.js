@@ -44,7 +44,7 @@ export const CategoryFactory = (sequelize) => {
         },
         name: {
             type: DataTypes.STRING,
-            unique: true,
+            // unique: true,
             allowNull: false,
         },
         description: {
@@ -55,5 +55,12 @@ export const CategoryFactory = (sequelize) => {
     }, {
         tableName: "categories",
         sequelize,
+        indexes: [
+            {
+                name: "category_name_unique_index",
+                unique: true,
+                fields: ["clientId", "name"],
+            },
+        ],
     });
 };

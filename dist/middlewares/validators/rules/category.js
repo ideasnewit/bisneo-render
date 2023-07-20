@@ -10,11 +10,17 @@ const { Category } = db;
 // name, description
 const commonRules = [
     body("name")
-        .trim().notEmpty().withMessage("Category name is required")
-        .isLength({ min: 2, max: 50 }).withMessage("Category name must be between 2 and 50 characters")
+        .trim()
+        .notEmpty()
+        .withMessage("Category name is required")
+        .isLength({ min: 2, max: 50 })
+        .withMessage("Category name must be between 2 and 50 characters")
         .bail()
         .custom(async (name, { req }) => {
-        const category = await Category.findOne({ where: { name } });
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const category = await Category.findOne({ where: { clientId, name } });
         if (itemExists(category, req.body.id)) {
             return Promise.reject("A category with this name already exists");
         }
@@ -26,18 +32,15 @@ const commonRules = [
     description,
 ];
 export const categoryRules = {
-    filter: [
-        query("name")
-            .optional({ checkFalsy: true }).trim(),
-        ...filters,
-    ],
+    filter: [query("name").optional({ checkFalsy: true }).trim(), ...filters],
     create: commonRules,
-    read: [
-        read("Category")
-    ],
+    read: [read("Category")],
     update: [
         body("id")
-            .trim().escape().notEmpty().withMessage("Category id is required")
+            .trim()
+            .escape()
+            .notEmpty()
+            .withMessage("Category id is required")
             .custom(async (id) => {
             const category = await Category.findByPk(id);
             if (category === null) {
@@ -47,7 +50,5 @@ export const categoryRules = {
         }),
         ...commonRules,
     ],
-    destroy: [
-        destroy("Category", async (pk) => await Category.findByPk(pk)),
-    ],
+    destroy: [destroy("Category", async (pk) => await Category.findByPk(pk))],
 };

@@ -71,12 +71,12 @@ export const ProductFactory = (sequelize) => {
         },
         code: {
             type: DataTypes.STRING,
-            unique: true,
+            // unique: true,
             allowNull: false,
         },
         name: {
             type: DataTypes.STRING,
-            unique: true,
+            // unique: true,
             allowNull: false,
         },
         unitCost: {
@@ -85,6 +85,11 @@ export const ProductFactory = (sequelize) => {
             defaultValue: 0.0,
         },
         unitPrice: {
+            type: DataTypes.DOUBLE,
+            allowNull: false,
+            defaultValue: 0.0,
+        },
+        labourCost: {
             type: DataTypes.DOUBLE,
             allowNull: false,
             defaultValue: 0.0,
@@ -112,5 +117,17 @@ export const ProductFactory = (sequelize) => {
     }, {
         tableName: "products",
         sequelize,
+        indexes: [
+            {
+                name: "product_code_unique_index",
+                unique: true,
+                fields: ["clientId", "code"],
+            },
+            {
+                name: "product_name_unique_index",
+                unique: true,
+                fields: ["clientId", "name"],
+            },
+        ],
     });
 };

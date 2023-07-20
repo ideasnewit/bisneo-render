@@ -27,7 +27,10 @@ const commonRules = [
         .withMessage("A phone number must be numerical")
         .bail()
         .custom(async (phone, { req }) => {
-        const customer = await Customer.findOne({ where: { phone } });
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const customer = await Customer.findOne({ where: { clientId, phone } });
         if (itemExists(customer, req.body.id)) {
             return Promise.reject("A customer with this phone number already exists");
         }
@@ -44,7 +47,10 @@ const commonRules = [
         .toLowerCase()
         .bail()
         .custom(async (email, { req }) => {
-        const customer = await Customer.findOne({ where: { email } });
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const customer = await Customer.findOne({ where: { clientId, email } });
         if (itemExists(customer, req.body.id)) {
             return Promise.reject("A customer with this email address already exists");
         }

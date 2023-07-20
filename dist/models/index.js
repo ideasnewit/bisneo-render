@@ -15,6 +15,7 @@ import { UserPaymentFactory } from "./userPayment.js";
 import { ClientPaymentFactory } from "./clientPayment.js";
 import { SalaryFactory } from "./salary.js";
 import { AttendanceFactory } from "./attendance.js";
+import { WorkLogFactory } from "./workLog.js";
 const models = {
     Client: ClientFactory(sequelize),
     User: UserFactory(sequelize),
@@ -32,6 +33,7 @@ const models = {
     ClientPayment: ClientPaymentFactory(sequelize),
     Salary: SalaryFactory(sequelize),
     Attendance: AttendanceFactory(sequelize),
+    WorkLog: WorkLogFactory(sequelize),
 };
 Object.keys(models).forEach((modelName) => {
     if (models[modelName].associations) {

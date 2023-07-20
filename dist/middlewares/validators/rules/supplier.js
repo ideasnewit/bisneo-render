@@ -14,13 +14,13 @@ const commonRules = [
         .isLength({ min: 2, max: 50 })
         .withMessage("Supplier's name must be between 2 and 50 characters")
         .bail()
-        .custom(async (name, { req }) => {
-        const supplier = await Supplier.findOne({ where: { name } });
-        if (itemExists(supplier, req.body.id)) {
-            return Promise.reject("A supplier with this name already exists");
-        }
-        return true;
-    })
+        // .custom(async (name: string, { req }) => {
+        //   const supplier = await Supplier.findOne({ where: { name } });
+        //   if (itemExists(supplier, req.body.id)) {
+        //     return Promise.reject("A supplier with this name already exists");
+        //   }
+        //   return true;
+        // })
         .customSanitizer((name) => {
         return toTitleCase(name);
     }),
@@ -34,7 +34,10 @@ const commonRules = [
         .withMessage("A phone number must be numerical")
         .bail()
         .custom(async (phone, { req }) => {
-        const supplier = await Supplier.findOne({ where: { phone } });
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const supplier = await Supplier.findOne({ where: { clientId, phone } });
         if (itemExists(supplier, req.body.id)) {
             return Promise.reject("A supplier with this phone number already exists");
         }
@@ -51,7 +54,10 @@ const commonRules = [
         .toLowerCase()
         .bail()
         .custom(async (email, { req }) => {
-        const supplier = await Supplier.findOne({ where: { email } });
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const supplier = await Supplier.findOne({ where: { clientId, email } });
         if (itemExists(supplier, req.body.id)) {
             return Promise.reject("A supplier with this email address already exists");
         }

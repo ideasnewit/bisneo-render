@@ -10,6 +10,6 @@ router
     .delete(clientRules.destroy, validate, clientController.destroy);
 router
     .route("/")
-    .get(clientRules.filter, validate, filter.customer, clientController.clients)
+    .get(clientRules.filter, validate, filter.client, clientController.clients)
     .patch(clientRules.update, validate, clientController.update)
     .post(clientRules.create, simpleValidate, clientController.create);

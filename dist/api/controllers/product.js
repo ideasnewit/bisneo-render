@@ -30,7 +30,7 @@ async function products(req, res, next) {
 }
 async function create(req, res, next) {
     try {
-        const { categoryId, code, name, unitCost, unitPrice, taxPercentage, store, counter, description, } = req.body;
+        const { categoryId, code, name, unitCost, unitPrice, labourCost, taxPercentage, store, counter, description, } = req.body;
         const clientId = req.headers["client-id"]
             ? req.headers["client-id"].toString()
             : "";
@@ -44,6 +44,7 @@ async function create(req, res, next) {
             name,
             unitCost,
             unitPrice,
+            labourCost,
             taxPercentage,
             store,
             counter,
@@ -107,7 +108,7 @@ async function read(req, res, next) {
 }
 async function update(req, res, next) {
     try {
-        const { id, categoryId, code, name, unitCost, unitPrice, taxPercentage, store, counter, description, } = req.body;
+        const { id, categoryId, code, name, unitCost, unitPrice, labourCost, taxPercentage, store, counter, description, } = req.body;
         const reqUser = req.headers["user-id"]
             ? req.headers["user-id"].toString()
             : "";
@@ -117,6 +118,7 @@ async function update(req, res, next) {
             name,
             unitCost,
             unitPrice,
+            labourCost,
             taxPercentage,
             store,
             counter,
@@ -212,6 +214,7 @@ const getMailBody = (title, category, product, isCancel = false) => {
     <div><span style="font-weight: bold;">Name: </span><span>${product?.name}</span></div>
     <div><span style="font-weight: bold;">Unit Cost: </span><span>${product?.unitCost}</span></div>
     <div><span style="font-weight: bold;">Unit Price: </span><span>${product?.unitPrice}</span></div>
+    <div><span style="font-weight: bold;">Labour Cost: </span><span>${product?.labourCost}</span></div>
     <div><span style="font-weight: bold;">tax Percentage: </span><span>${product?.taxPercentage}</span></div>
     <div><span style="font-weight: bold;">Store: </span><span>${product?.store}</span></div>
     <div><span style="font-weight: bold;">Counter: </span><span>${product?.counter}</span></div>

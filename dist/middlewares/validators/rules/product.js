@@ -7,7 +7,6 @@ import itemExists from "./libs/itemExists.js";
 import { description } from "./libs/description.js";
 import toTitleCase from "../../../libs/toTitleCase.js";
 import filters from "./libs/filters.js";
-import { queryWithFilter } from "./libs/queryWithFilter.js";
 const Op = Sequelize.Op;
 const { Category, Product } = db;
 // categoryId, name, description, unitCost, unitPrice, store, counter
@@ -33,7 +32,10 @@ const commonRules = [
         .withMessage("Product code must be between 2 and 25 characters")
         .bail()
         .custom(async (code, { req }) => {
-        const product = await Product.findOne({ where: { code } });
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const product = await Product.findOne({ where: { clientId, code } });
         if (itemExists(product, req.body.id)) {
             return Promise.reject("A product with this code already exists");
         }
@@ -47,7 +49,10 @@ const commonRules = [
         .withMessage("Product name must be between 2 and 50 characters")
         .bail()
         .custom(async (name, { req }) => {
-        const product = await Product.findOne({ where: { name } });
+        const clientId = req.headers && req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const product = await Product.findOne({ where: { clientId, name } });
         if (itemExists(product, req.body.id)) {
             return Promise.reject("A product with this name already exists");
         }
@@ -81,6 +86,15 @@ const commonRules = [
         }
         return true;
     }),
+    body("labourCost")
+        .trim()
+        .notEmpty()
+        .withMessage("Labour cost is required")
+        .isDecimal({ decimal_digits: "1,2" })
+        .withMessage("Labour cost must not exceeding 2 decimal places")
+        .isFloat({ min: 0 })
+        .withMessage("Labour cost must be greater than or equal to 0")
+        .toFloat(),
     body("taxPercentage")
         .trim()
         .notEmpty()
@@ -110,11 +124,15 @@ const commonRules = [
 export const productRules = {
     filter: [
         query("name").optional({ checkFalsy: true }).trim(),
-        queryWithFilter("category", async (categoryName) => await Category.findAll({
-            where: {
-                name: { [Op.like]: `%${categoryName}%` },
-            },
-        })),
+        // queryWithFilter(
+        //   "category",
+        //   async (categoryName) =>
+        //     await Category.findAll({
+        //       where: {
+        //         name: { [Op.iLike]: `%${categoryName}%` },
+        //       },
+        //     })
+        // ),
         ...filters,
     ],
     create: commonRules,

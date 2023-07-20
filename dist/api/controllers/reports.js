@@ -388,4 +388,58 @@ async function topBuyingCustomers(req, res, next) {
         next({ status: 500, error: "Db error getting sales" });
     }
 }
-export { summary, sales, productSales, stockCount, pendingBills, outOfStockProducts, topSellingProducts, topBuyingCustomers, };
+async function topSellingUsers(req, res, next) {
+    try {
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        let { limit } = req.query;
+        const { filter, pagination } = res.locals;
+        let resultLimit = 10;
+        if (limit && limit.length) {
+            resultLimit = parseInt(limit.toString());
+        }
+        const salesList = await sequelize.query(`SELECT s."createdBy" as "id", (SELECT u."name" FROM public."users" as "u" where u."id" = s."createdBy") as "name", CAST(COUNT(s."id") AS INT) AS "total" FROM public."sales" as "s" where s."clientId" = '${clientId}' GROUP BY s."createdBy" ORDER BY "total" DESC LIMIT ${resultLimit}`, { type: QueryTypes.SELECT });
+        if (salesList && salesList.length > 0) {
+            pagination.count = salesList.length;
+            return res.status(200).json({ count: salesList.length, sales: salesList });
+        }
+        else {
+            return res.status(400).json({
+                error: "No sales found!",
+            });
+        }
+    }
+    catch (error) {
+        console.log("\n\nError getting sales: ", error, "\n\n");
+        next({ status: 500, error: "Db error getting sales" });
+    }
+}
+async function topBuyingUsers(req, res, next) {
+    try {
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        let { limit } = req.query;
+        const { filter, pagination } = res.locals;
+        let resultLimit = 10;
+        if (limit && limit.length) {
+            resultLimit = parseInt(limit.toString());
+        }
+        const purchaseList = await sequelize.query(`SELECT p."createdBy" as "id", (SELECT u."name" FROM public."users" as "u" where u."id" = p."createdBy") as "name", CAST(COUNT(p."id") AS INT) AS "total" FROM public."purchases" as "p" where p."clientId" = '${clientId}' GROUP BY p."createdBy" ORDER BY "total" DESC LIMIT ${resultLimit}`, { type: QueryTypes.SELECT });
+        if (purchaseList && purchaseList.length > 0) {
+            pagination.count = purchaseList.length;
+            return res.status(200).json({ count: purchaseList.length, purchases: purchaseList });
+        }
+        else {
+            return res.status(400).json({
+                error: "No purchase found!",
+            });
+        }
+    }
+    catch (error) {
+        console.log("\n\nError getting purchase: ", error, "\n\n");
+        next({ status: 500, error: "Db error getting purchase" });
+    }
+}
+export { summary, sales, productSales, stockCount, pendingBills, outOfStockProducts, topSellingProducts, topBuyingCustomers, topSellingUsers, topBuyingUsers };

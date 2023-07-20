@@ -44,12 +44,12 @@ export const SupplierFactory = (sequelize) => {
         },
         name: {
             type: DataTypes.STRING,
-            unique: true,
+            // unique: true,
             allowNull: false,
         },
         phone: {
             type: DataTypes.STRING(10),
-            unique: true,
+            // unique: true,
             allowNull: false,
         },
         email: {
@@ -65,5 +65,12 @@ export const SupplierFactory = (sequelize) => {
     }, {
         tableName: "suppliers",
         sequelize,
+        indexes: [
+            {
+                name: "supplier_phone_unique_index",
+                unique: true,
+                fields: ["clientId", "phone"],
+            },
+        ],
     });
 };

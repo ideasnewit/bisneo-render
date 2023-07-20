@@ -8,3 +8,7 @@ router
     .route("/")
     .get(salaryRules.filter, validate, filter.salary, userController.salaries)
     .post(salaryRules.create, validate, userController.calculateSalary);
+router.route("/info")
+    .post(salaryRules.create, validate, userController.getSalaryInfo);
+router.route("/approve")
+    .post(salaryRules.create, validate, userController.approveSalary);

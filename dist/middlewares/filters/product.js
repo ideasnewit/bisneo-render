@@ -2,25 +2,25 @@ import Sequelize from "sequelize";
 import processFilters from "./processFilters.js";
 const Op = Sequelize.Op;
 export function product(req, res, next) {
-    const { code, name, category } = req.query;
+    const { code, name, categoryId } = req.query;
     const conditions = [];
     if (code) {
         conditions.push({
             code: {
-                [Op.like]: `%${code}%`,
+                [Op.iLike]: `%${code}%`,
             },
         });
     }
     if (name) {
         conditions.push({
             name: {
-                [Op.like]: `%${name}%`,
+                [Op.iLike]: `%${name}%`,
             },
         });
     }
-    if (category) {
+    if (categoryId) {
         conditions.push({
-            categoryId: category,
+            categoryId: categoryId,
         });
     }
     processFilters(req, res, next, conditions);

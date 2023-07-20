@@ -82,7 +82,6 @@ async function update(req, res, next) {
         const reqUser = req.headers["user-id"]
             ? req.headers["user-id"].toString()
             : "";
-        console.log("description::: ", description);
         const [affectedRows] = await Category.update({ name, description, updatedBy: reqUser }, { where: { id } });
         if (affectedRows !== 1) {
             return res.status(400).json({

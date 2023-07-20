@@ -18,7 +18,7 @@ export const saleRules = {
     filter: [
         queryWithFilter("product", async (productName) => await Product.findAll({
             where: {
-                name: { [Op.like]: `%${productName}%` },
+                name: { [Op.iLike]: `%${productName}%` },
             },
         })),
         ...filters,
@@ -102,6 +102,14 @@ export const saleRules = {
             .withMessage("Sales Date is required")
             .isDate()
             .withMessage("Sale Date must be a valid date"),
+        body("paymentType")
+            .trim()
+            .notEmpty()
+            .withMessage("Payment Type is required"),
+        body("saleType")
+            .trim()
+            .notEmpty()
+            .withMessage("Sale Type is required"),
         body("customerId")
             .trim()
             .escape()

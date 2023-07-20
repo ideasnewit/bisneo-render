@@ -8,6 +8,6 @@ router.route("/:id")
     .get(stockHistoryRules.read, validate, stockHistoryController.read)
     .delete(stockHistoryRules.destroy, validate, stockHistoryController.destroy);
 router.route("/")
-    .get(stockHistoryRules.filter, validate, filter.purchase, stockHistoryController.stockHistorys)
+    .get(stockHistoryRules.filter, validate, filter.stockHistory, stockHistoryController.stockHistorys)
     .patch(stockHistoryRules.update, validate, stockHistoryController.update)
     .post(stockHistoryRules.create, validate, stockHistoryController.create);

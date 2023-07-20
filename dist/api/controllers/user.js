@@ -4,8 +4,9 @@ import { toDateTime } from "../../libs/index.js";
 import db from "../../models/index.js";
 import sequelize from "../../config/config.js";
 import moment from "moment";
+const QueryTypes = Sequelize.QueryTypes;
 const Op = Sequelize.Op;
-const { User, UserPayment, Salary, Attendance, Client } = db;
+const { User, UserPayment, Salary, Attendance, Client, WorkLog, Product } = db;
 async function users(req, res, next) {
     try {
         const { filter, pagination } = res.locals;
@@ -428,6 +429,35 @@ async function payments(req, res, next) {
         next({ status: 500, error: "Db error getting payments" });
     }
 }
+async function readPayment(req, res, next) {
+    try {
+        const userPayment = await UserPayment.findByPk(req.params.id, {
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                },
+            ],
+        });
+        if (userPayment === null) {
+            return res.status(400).json({
+                error: "Payment not found",
+            });
+        }
+        else {
+            const salary = await Salary.findOne({
+                where: {
+                    userPaymentId: req.params.id,
+                },
+            });
+            return res.status(200).json({ userPayment: { ...userPayment.dataValues, salary } });
+        }
+    }
+    catch (error) {
+        console.log("\n\nError getting payment: ", error, "\n\n");
+        next({ status: 500, error: "Db error getting payment" });
+    }
+}
 async function logTime(req, res, next) {
     try {
         const { userId, comments } = req.body;
@@ -551,6 +581,248 @@ async function attendanceList(req, res, next) {
         next({ status: 500, error: "Db error getting attendance" });
     }
 }
+async function salaries(req, res, next) {
+    try {
+        const { filter, pagination } = res.locals;
+        const { count, rows } = await Salary.findAndCountAll({
+            distinct: true,
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                },
+            ],
+            ...filter,
+        });
+        if (count) {
+            pagination.count = count;
+            return res.status(200).json({ salary: rows, pagination });
+        }
+        else {
+            return res.status(400).json({
+                error: "No salarys found",
+            });
+        }
+    }
+    catch (error) {
+        console.log("\n\nError getting salarys:", error, "\n\n");
+        next({ status: 500, error: "Db error getting salarys" });
+    }
+}
+async function getSalaryInfo(req, res, next) {
+    try {
+        const { userId } = req.body;
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        // Load last salary row
+        const lastSalary = await Salary.findOne({
+            where: {
+                clientId: clientId,
+                userId: userId?.toString(),
+            },
+            order: [["createdAt", "DESC"]],
+        });
+        if (lastSalary &&
+            lastSalary.toDate &&
+            moment().diff(moment(lastSalary.toDate, "hours")) < 24) {
+            return res.status(400).json({
+                error: `You have done the salary calculation ${moment(lastSalary.toDate).fromNow()} for this user. So please wait 24 hours to calculate salary again.`,
+            });
+        }
+        else {
+            const user = await User.findByPk(userId);
+            if (user === null) {
+                return res.status(400).json({
+                    error: "User not found",
+                });
+            }
+            else {
+                const client = await Client.findByPk(clientId);
+                if (client === null) {
+                    return res.status(400).json({
+                        error: "Client not found",
+                    });
+                }
+                else {
+                    let attendanceList = [];
+                    const attendanceRows = await Attendance.findAll({
+                        where: {
+                            clientId: clientId,
+                            userId: userId,
+                            isActive: true,
+                            duration: {
+                                [Op.gt]: 0,
+                            },
+                            // outTime: {
+                            //   [Op.not]: undefined,
+                            // },
+                        },
+                        order: [["outTime", "DESC"]],
+                    });
+                    if (attendanceRows && attendanceRows.length > 0) {
+                        const paymentTerm = user.dataValues?.paymentTerm;
+                        const paymentRate = user.dataValues?.paymentRate
+                            ? user.dataValues?.paymentRate
+                            : 0;
+                        let ratePerHour = 0;
+                        if (paymentTerm === "hour") {
+                            ratePerHour = paymentRate;
+                        }
+                        else {
+                            const workingHoursPerDay = client.dataValues?.workingHoursPerDay
+                                ? client.dataValues?.workingHoursPerDay
+                                : 0;
+                            const workingDaysPerWeek = client.dataValues?.workingDaysPerWeek
+                                ? client.dataValues?.workingDaysPerWeek
+                                : 0;
+                            if (paymentTerm === "day") {
+                                ratePerHour = paymentRate / workingHoursPerDay;
+                            }
+                            else if (paymentTerm === "week") {
+                                ratePerHour =
+                                    paymentRate / (workingHoursPerDay * workingDaysPerWeek);
+                            }
+                            else if (paymentTerm === "month") {
+                                ratePerHour =
+                                    paymentRate / (workingHoursPerDay * workingDaysPerWeek * 4);
+                            }
+                        }
+                        // Calculate amount for each attendance row.
+                        attendanceRows.map(a => {
+                            let amount = 0;
+                            let duration = a.duration ? a.duration : 0;
+                            const activeMinutes = duration / 60;
+                            amount = (activeMinutes / 60) * ratePerHour;
+                            if (amount > 0) {
+                                amount = +amount.toFixed(2);
+                            }
+                            attendanceList.push({ ...(a.dataValues ? a.dataValues : a), amount });
+                        });
+                    }
+                    // Get work log list
+                    const workLogRows = await WorkLog.findAll({
+                        include: [
+                            {
+                                model: Product,
+                                as: "product",
+                            },
+                        ],
+                        where: {
+                            clientId: clientId,
+                            userId: userId,
+                            isActive: true,
+                        },
+                        order: [["date", "DESC"]],
+                    });
+                    return res.status(200).json({ salaryInfo: { attendances: attendanceList, workLogs: workLogRows } });
+                }
+            }
+        }
+    }
+    catch (error) {
+        console.log("\n\nError getting salary info: ", error, "\n\n");
+        next({ status: 500, error: "Db error getting salary info" });
+    }
+}
+async function approveSalary(req, res, next) {
+    try {
+        const { userId, attendances, workLogs, bonus, deduction, totalAmount, totalSalary, from, to, comments } = req.body;
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const reqUser = req.headers["user-id"]
+            ? req.headers["user-id"].toString()
+            : "";
+        // Create user payment
+        const userPayment = await UserPayment.create({
+            clientId,
+            userId,
+            amount: totalSalary,
+            isPaid: false,
+            isSalary: true,
+            date: new Date(),
+            paymentMode: "",
+            paymentType: "",
+            comments: comments,
+            isActive: true,
+            createdBy: reqUser,
+            updatedBy: reqUser,
+        });
+        if (userPayment.dataValues) {
+            // Update all active Attendance rows to inactive
+            if (attendances && attendances.length > 0) {
+                const [affectedRows] = await Attendance.update({
+                    isActive: false,
+                    updatedBy: reqUser,
+                }, {
+                    where: {
+                        id: {
+                            [Op.in]: attendances.map((a) => a.id)
+                        }
+                    },
+                });
+            }
+            // Update all active Work Log rows to inactive          
+            if (workLogs && workLogs.length > 0) {
+                // for(let i = 0;i < workLogs.length;i++){
+                //   const [affectedRows] = await WorkLog.update(
+                //     {
+                //       amount: +workLogs[i].amount,
+                //       isActive: false,
+                //       updatedBy: reqUser,
+                //     },
+                //     {
+                //       where: {
+                //         id:{
+                //           [Op.in]: workLogs[i].id
+                //         }
+                //       },
+                //     }
+                //   );
+                // }
+                let wlUpdateQuery = "";
+                workLogs.map((w) => {
+                    wlUpdateQuery += `UPDATE public."workLog" SET "amount" = ${+w.amount}, "isActive" = false, "updatedBy" = '${reqUser}'  WHERE id = '${w.id}';`;
+                });
+                const affectedRows = await sequelize.query(wlUpdateQuery, { type: QueryTypes.UPDATE });
+            }
+            // Create salary
+            const salary = await Salary.create({
+                clientId,
+                userId,
+                userPaymentId: userPayment.dataValues.id,
+                fromDate: from,
+                toDate: to,
+                amount: totalAmount,
+                bonus: bonus,
+                deduction: deduction,
+                totalAmount: totalSalary,
+                comments: comments,
+                details: JSON.stringify(req.body),
+                createdBy: reqUser,
+                updatedBy: reqUser,
+            });
+            if (salary.dataValues) {
+                return res.status(200).json({ salary: salary });
+            }
+            else {
+                return res.status(400).json({
+                    error: "Failed to create salary.",
+                });
+            }
+        }
+        else {
+            return res.status(400).json({
+                error: "Failed to create payment.",
+            });
+        }
+    }
+    catch (error) {
+        console.log("\n\nError approve salary: ", error, "\n\n");
+        next({ status: 500, error: "Db error approve salary" });
+    }
+}
 async function calculateSalary(req, res, next) {
     try {
         const { userId, comments } = req.body;
@@ -577,12 +849,27 @@ async function calculateSalary(req, res, next) {
         }
         else {
             let totalActiveDurations = 0;
+            // let totalActiveWorkLogAmount = 0;
+            // Load active duration from attendance
             const totalActiveDurationsResult = await getTotalActiveDuration(clientId, userId?.toString(), next);
             if (totalActiveDurationsResult &&
                 totalActiveDurationsResult.totalDuration &&
                 totalActiveDurationsResult.totalDuration > 0) {
                 totalActiveDurations = totalActiveDurationsResult.totalDuration;
             }
+            // Load active work log amount from work log
+            // const totalActiveWorkLogAmountResult: any = await getTotalActiveWorkLogAmount(
+            //   clientId,
+            //   userId?.toString(),
+            //   next
+            // );
+            // if (
+            //   totalActiveWorkLogAmountResult &&
+            //   totalActiveWorkLogAmountResult.totalAmount &&
+            //   totalActiveWorkLogAmountResult.totalAmount > 0
+            // ) {
+            //   totalActiveWorkLogAmount = totalActiveWorkLogAmountResult.totalAmount;
+            // }
             if (totalActiveDurations && totalActiveDurations > 0) {
                 // Load salary from
                 const salaryFrom = await Attendance.findOne({
@@ -677,7 +964,7 @@ async function calculateSalary(req, res, next) {
                                 date: new Date(),
                                 paymentMode: "",
                                 paymentType: "",
-                                comments: `Salary calculated for the work done from ${toDateTime(salaryFrom?.inTime)} to ${toDateTime(salaryTo?.outTime)} (${totalActiveMinutes / 60} hours)`,
+                                comments: `Salary calculated for the work done from ${toDateTime(salaryFrom?.inTime)} to ${toDateTime(salaryTo?.outTime)} (${(totalActiveMinutes / 60).toFixed(2)} hours)`,
                                 isActive: true,
                                 createdBy: reqUser,
                                 updatedBy: reqUser,
@@ -708,6 +995,9 @@ async function calculateSalary(req, res, next) {
                                     amount: totalSalary,
                                     fromDate: salaryFrom?.inTime,
                                     toDate: salaryTo?.outTime,
+                                    bonus: 0,
+                                    deduction: 0,
+                                    totalAmount: 0,
                                     comments: `Salary calculated for the work done from ${toDateTime(salaryFrom?.inTime)} to ${toDateTime(salaryTo?.outTime)}`,
                                     createdBy: reqUser,
                                     updatedBy: reqUser,
@@ -750,34 +1040,6 @@ async function calculateSalary(req, res, next) {
     catch (error) {
         console.log("\n\nError calculating salary: ", error, "\n\n");
         next({ status: 500, error: "Db error calculating salary" });
-    }
-}
-async function salaries(req, res, next) {
-    try {
-        const { filter, pagination } = res.locals;
-        const { count, rows } = await Salary.findAndCountAll({
-            distinct: true,
-            include: [
-                {
-                    model: User,
-                    as: "user",
-                },
-            ],
-            ...filter,
-        });
-        if (count) {
-            pagination.count = count;
-            return res.status(200).json({ salary: rows, pagination });
-        }
-        else {
-            return res.status(400).json({
-                error: "No salarys found",
-            });
-        }
-    }
-    catch (error) {
-        console.log("\n\nError getting salarys:", error, "\n\n");
-        next({ status: 500, error: "Db error getting salarys" });
     }
 }
 async function getTotalActiveAmount(clientId, userId, isPaid, next) {
@@ -823,8 +1085,28 @@ async function getTotalActiveDuration(clientId, userId, next) {
         });
     }
     catch (error) {
-        console.log("\n\nError calculating active amount: ", error, "\n\n");
-        next({ status: 500, error: "Db error calculating active amount" });
+        console.log("\n\nError calculating attendance active amount: ", error, "\n\n");
+        next({ status: 500, error: "Db error calculating attendance active amount" });
+    }
+}
+async function getTotalActiveWorkLogAmount(clientId, userId, next) {
+    try {
+        return await WorkLog.findOne({
+            attributes: [
+                [sequelize.fn("sum", sequelize.col("amount")), "totalAmount"],
+            ],
+            group: ["userId"],
+            where: {
+                clientId: clientId,
+                userId: userId,
+                isActive: true,
+            },
+            raw: true,
+        });
+    }
+    catch (error) {
+        console.log("\n\nError calculating work log active amount: ", error, "\n\n");
+        next({ status: 500, error: "Db error calculating work log active amount" });
     }
 }
 const getMailBody = (title, user, isCancel = false) => {
@@ -861,4 +1143,4 @@ const getPaymentMailBody = (title, user, payment) => {
     </div>`;
     return mailBody;
 };
-export { users, create, read, readProfile, update, updateProfile, changePassword, destroy, pay, editPayment, payments, logTime, loginStatus, attendanceList, calculateSalary, salaries, };
+export { users, create, read, readProfile, update, updateProfile, changePassword, destroy, pay, editPayment, payments, readPayment, logTime, loginStatus, attendanceList, salaries, getSalaryInfo, approveSalary, calculateSalary, };

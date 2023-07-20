@@ -7,21 +7,21 @@ export function supplier(req, res, next) {
     if (name) {
         conditions.push({
             name: {
-                [Op.like]: `%${name}%`
+                [Op.iLike]: `%${name}%`
             }
         });
     }
     if (phone) {
         conditions.push({
             phone: {
-                [Op.like]: `%${phone}%`
+                [Op.iLike]: `%${phone}%`
             }
         });
     }
     if (email) {
         conditions.push({
             email: {
-                [Op.like]: `%${email}%`
+                [Op.iLike]: `%${email}%`
             }
         });
     }

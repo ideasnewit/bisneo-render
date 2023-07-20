@@ -47,11 +47,6 @@ export const SalaryFactory = (sequelize) => {
             unique: true,
             allowNull: false,
         },
-        amount: {
-            type: DataTypes.DOUBLE,
-            allowNull: false,
-            defaultValue: 0.0,
-        },
         fromDate: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -62,7 +57,31 @@ export const SalaryFactory = (sequelize) => {
             allowNull: false,
             defaultValue: new Date(),
         },
+        amount: {
+            type: DataTypes.DOUBLE,
+            allowNull: false,
+            defaultValue: 0.0,
+        },
+        bonus: {
+            type: DataTypes.DOUBLE,
+            allowNull: false,
+            defaultValue: 0.0,
+        },
+        deduction: {
+            type: DataTypes.DOUBLE,
+            allowNull: false,
+            defaultValue: 0.0,
+        },
+        totalAmount: {
+            type: DataTypes.DOUBLE,
+            allowNull: false,
+            defaultValue: 0.0,
+        },
         comments: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        details: {
             type: DataTypes.STRING,
             allowNull: true,
         },

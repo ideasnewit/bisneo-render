@@ -11,7 +11,7 @@ export const transferRules = {
     filter: [
         queryWithFilter("product", async (productName) => await Product.findAll({
             where: {
-                name: { [Op.like]: `%${productName}%` }
+                name: { [Op.iLike]: `%${productName}%` }
             }
         })),
         ...filters,
