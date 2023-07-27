@@ -82,7 +82,7 @@ export const SalaryFactory = (sequelize) => {
             allowNull: true,
         },
         details: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
         },
     }, {

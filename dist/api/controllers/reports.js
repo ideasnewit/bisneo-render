@@ -3,7 +3,7 @@ import { toDate, getWeekDay, getMonth } from "../../libs/index.js";
 import db from "../../models/index.js";
 const Op = Sequelize.Op;
 const QueryTypes = Sequelize.QueryTypes;
-const { sequelize, Supplier, Purchase, Sale, SaleProduct, AmountReceived, Product, Category, Customer, } = db;
+const { sequelize, Supplier, Purchase, Sale, SaleProduct, AmountReceived, Product, Category, Customer, User, Attendance, UserPayment, } = db;
 async function summary(req, res, next) {
     try {
         const clientId = req.headers["client-id"]
@@ -176,6 +176,12 @@ async function productSales(req, res, next) {
                         {
                             model: Product,
                             as: "product",
+                            include: [
+                                {
+                                    model: Category,
+                                    as: "category",
+                                },
+                            ],
                         },
                     ],
                 },
@@ -185,6 +191,7 @@ async function productSales(req, res, next) {
         });
         if (count) {
             pagination.count = count;
+            let catrgoryArray = [];
             let productsArray = [];
             if (rows && rows.length > 0) {
                 rows.map((s) => {
@@ -196,6 +203,34 @@ async function productSales(req, res, next) {
                             // }else{
                             //     productsCount[p.name] = 1;
                             // }
+                            let c = p.product && p.product.category
+                                ? p.product.category.dataValues
+                                    ? p.product.category.dataValues
+                                    : p.product.category
+                                : null;
+                            if (c && c.id) {
+                                const foundCatIndex = catrgoryArray.findIndex((cr) => cr.id === c.id);
+                                if (foundCatIndex >= 0) {
+                                    catrgoryArray[foundCatIndex].quantity =
+                                        catrgoryArray[foundCatIndex].quantity +
+                                            parseInt(p.quantity);
+                                    catrgoryArray[foundCatIndex].totalCost =
+                                        catrgoryArray[foundCatIndex].totalCost +
+                                            parseFloat(p.unitCost) * parseInt(p.quantity);
+                                    catrgoryArray[foundCatIndex].totalPrice =
+                                        catrgoryArray[foundCatIndex].totalPrice +
+                                            parseFloat(p.unitPrice) * parseInt(p.quantity);
+                                }
+                                else {
+                                    catrgoryArray.push({
+                                        id: c.id,
+                                        name: c.name,
+                                        quantity: parseInt(p.quantity),
+                                        totalCost: parseFloat(p.unitCost) * parseInt(p.quantity),
+                                        totalPrice: parseFloat(p.unitPrice) * parseInt(p.quantity),
+                                    });
+                                }
+                            }
                             const foundIndex = productsArray.findIndex((pr) => pr.id === p.productId);
                             if (foundIndex >= 0) {
                                 productsArray[foundIndex].quantity =
@@ -221,7 +256,9 @@ async function productSales(req, res, next) {
                 });
             }
             // return res.status(200).json({ sales: result, products: productsCount, total });
-            return res.status(200).json({ products: productsArray });
+            return res
+                .status(200)
+                .json({ products: productsArray, categories: catrgoryArray });
         }
         else {
             return res.status(400).json({
@@ -402,7 +439,9 @@ async function topSellingUsers(req, res, next) {
         const salesList = await sequelize.query(`SELECT s."createdBy" as "id", (SELECT u."name" FROM public."users" as "u" where u."id" = s."createdBy") as "name", CAST(COUNT(s."id") AS INT) AS "total" FROM public."sales" as "s" where s."clientId" = '${clientId}' GROUP BY s."createdBy" ORDER BY "total" DESC LIMIT ${resultLimit}`, { type: QueryTypes.SELECT });
         if (salesList && salesList.length > 0) {
             pagination.count = salesList.length;
-            return res.status(200).json({ count: salesList.length, sales: salesList });
+            return res
+                .status(200)
+                .json({ count: salesList.length, sales: salesList });
         }
         else {
             return res.status(400).json({
@@ -429,7 +468,9 @@ async function topBuyingUsers(req, res, next) {
         const purchaseList = await sequelize.query(`SELECT p."createdBy" as "id", (SELECT u."name" FROM public."users" as "u" where u."id" = p."createdBy") as "name", CAST(COUNT(p."id") AS INT) AS "total" FROM public."purchases" as "p" where p."clientId" = '${clientId}' GROUP BY p."createdBy" ORDER BY "total" DESC LIMIT ${resultLimit}`, { type: QueryTypes.SELECT });
         if (purchaseList && purchaseList.length > 0) {
             pagination.count = purchaseList.length;
-            return res.status(200).json({ count: purchaseList.length, purchases: purchaseList });
+            return res
+                .status(200)
+                .json({ count: purchaseList.length, purchases: purchaseList });
         }
         else {
             return res.status(400).json({
@@ -442,4 +483,105 @@ async function topBuyingUsers(req, res, next) {
         next({ status: 500, error: "Db error getting purchase" });
     }
 }
-export { summary, sales, productSales, stockCount, pendingBills, outOfStockProducts, topSellingProducts, topBuyingCustomers, topSellingUsers, topBuyingUsers };
+async function activeUsers(req, res, next) {
+    try {
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const { count, rows } = await Attendance.findAndCountAll({
+            distinct: true,
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                },
+            ],
+            where: {
+                clientId: clientId,
+                isActive: true,
+                outTime: { [Op.is]: undefined },
+            },
+        });
+        if (rows && rows.length > 0) {
+            return res.status(200).json({ count, attendances: rows });
+        }
+        else {
+            return res.status(400).json({
+                error: "No active users found!",
+            });
+        }
+    }
+    catch (error) {
+        console.log("\n\nError getting active users: ", error, "\n\n");
+        next({ status: 500, error: "Db error getting active users" });
+    }
+}
+async function pendingTransactions(req, res, next) {
+    try {
+        const clientId = req.headers["client-id"]
+            ? req.headers["client-id"].toString()
+            : "";
+        const paymentRows = await UserPayment.findAll({
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                },
+            ],
+            where: {
+                clientId: clientId,
+                isActive: true,
+            },
+        });
+        let transactions = [];
+        if (paymentRows && paymentRows.length > 0) {
+            paymentRows.map((p) => {
+                const foundIndex = transactions.findIndex((tr) => tr.userId === p.userId);
+                if (foundIndex >= 0) {
+                    transactions[foundIndex].amountPaid =
+                        transactions[foundIndex].amountPaid +
+                            (p.isPaid ? parseFloat(p.amount) : 0);
+                    transactions[foundIndex].amountReceived =
+                        transactions[foundIndex].amountReceived +
+                            (!p.isPaid ? parseFloat(p.amount) : 0);
+                    transactions[foundIndex].amountPayable =
+                        transactions[foundIndex].amountReceived >
+                            transactions[foundIndex].amountPaid
+                            ? transactions[foundIndex].amountReceived -
+                                transactions[foundIndex].amountPaid
+                            : 0;
+                    transactions[foundIndex].amountReceivable =
+                        transactions[foundIndex].amountPaid >
+                            transactions[foundIndex].amountReceived
+                            ? transactions[foundIndex].amountPaid -
+                                transactions[foundIndex].amountReceived
+                            : 0;
+                }
+                else {
+                    transactions.push({
+                        userId: p.userId,
+                        name: p.user.name,
+                        role: p.user.role,
+                        amountPaid: p.isPaid ? parseFloat(p.amount) : 0,
+                        amountReceived: !p.isPaid ? parseFloat(p.amount) : 0,
+                        amountPayable: !p.isPaid ? parseFloat(p.amount) : 0,
+                        amountReceivable: p.isPaid ? parseFloat(p.amount) : 0,
+                    });
+                }
+            });
+        }
+        if (transactions && transactions.length > 0) {
+            return res.status(200).json({ transactions });
+        }
+        else {
+            return res.status(400).json({
+                error: "No pending transactions found!",
+            });
+        }
+    }
+    catch (error) {
+        console.log("\n\nError getting pending transactions: ", error, "\n\n");
+        next({ status: 500, error: "Db error getting pending transactions" });
+    }
+}
+export { summary, sales, productSales, stockCount, pendingBills, outOfStockProducts, topSellingProducts, topBuyingCustomers, topSellingUsers, topBuyingUsers, activeUsers, pendingTransactions, };

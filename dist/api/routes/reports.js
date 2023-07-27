@@ -35,3 +35,9 @@ router
 router
     .route("/topbuyingusers")
     .get(productRules.filter, validate, filter.product, reportsController.topBuyingUsers);
+router
+    .route("/activeusers")
+    .get(productRules.filter, validate, filter.product, reportsController.activeUsers);
+router
+    .route("/pendingtransactions")
+    .get(productRules.filter, validate, filter.product, reportsController.pendingTransactions);

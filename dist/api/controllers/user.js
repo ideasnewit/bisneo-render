@@ -450,7 +450,9 @@ async function readPayment(req, res, next) {
                     userPaymentId: req.params.id,
                 },
             });
-            return res.status(200).json({ userPayment: { ...userPayment.dataValues, salary } });
+            return res
+                .status(200)
+                .json({ userPayment: { ...userPayment.dataValues, salary } });
         }
     }
     catch (error) {
@@ -689,7 +691,7 @@ async function getSalaryInfo(req, res, next) {
                             }
                         }
                         // Calculate amount for each attendance row.
-                        attendanceRows.map(a => {
+                        attendanceRows.map((a) => {
                             let amount = 0;
                             let duration = a.duration ? a.duration : 0;
                             const activeMinutes = duration / 60;
@@ -697,7 +699,10 @@ async function getSalaryInfo(req, res, next) {
                             if (amount > 0) {
                                 amount = +amount.toFixed(2);
                             }
-                            attendanceList.push({ ...(a.dataValues ? a.dataValues : a), amount });
+                            attendanceList.push({
+                                ...(a.dataValues ? a.dataValues : a),
+                                amount,
+                            });
                         });
                     }
                     // Get work log list
@@ -715,7 +720,12 @@ async function getSalaryInfo(req, res, next) {
                         },
                         order: [["date", "DESC"]],
                     });
-                    return res.status(200).json({ salaryInfo: { attendances: attendanceList, workLogs: workLogRows } });
+                    return res.status(200).json({
+                        salaryInfo: {
+                            attendances: attendanceList,
+                            workLogs: workLogRows,
+                        },
+                    });
                 }
             }
         }
@@ -727,7 +737,7 @@ async function getSalaryInfo(req, res, next) {
 }
 async function approveSalary(req, res, next) {
     try {
-        const { userId, attendances, workLogs, bonus, deduction, totalAmount, totalSalary, from, to, comments } = req.body;
+        const { userId, attendances, workLogs, bonus, deduction, totalAmount, totalSalary, from, to, comments, } = req.body;
         const clientId = req.headers["client-id"]
             ? req.headers["client-id"].toString()
             : "";
@@ -758,12 +768,12 @@ async function approveSalary(req, res, next) {
                 }, {
                     where: {
                         id: {
-                            [Op.in]: attendances.map((a) => a.id)
-                        }
+                            [Op.in]: attendances.map((a) => a.id),
+                        },
                     },
                 });
             }
-            // Update all active Work Log rows to inactive          
+            // Update all active Work Log rows to inactive
             if (workLogs && workLogs.length > 0) {
                 // for(let i = 0;i < workLogs.length;i++){
                 //   const [affectedRows] = await WorkLog.update(
@@ -785,7 +795,9 @@ async function approveSalary(req, res, next) {
                 workLogs.map((w) => {
                     wlUpdateQuery += `UPDATE public."workLog" SET "amount" = ${+w.amount}, "isActive" = false, "updatedBy" = '${reqUser}'  WHERE id = '${w.id}';`;
                 });
-                const affectedRows = await sequelize.query(wlUpdateQuery, { type: QueryTypes.UPDATE });
+                const affectedRows = await sequelize.query(wlUpdateQuery, {
+                    type: QueryTypes.UPDATE,
+                });
             }
             // Create salary
             const salary = await Salary.create({
@@ -1086,7 +1098,10 @@ async function getTotalActiveDuration(clientId, userId, next) {
     }
     catch (error) {
         console.log("\n\nError calculating attendance active amount: ", error, "\n\n");
-        next({ status: 500, error: "Db error calculating attendance active amount" });
+        next({
+            status: 500,
+            error: "Db error calculating attendance active amount",
+        });
     }
 }
 async function getTotalActiveWorkLogAmount(clientId, userId, next) {
