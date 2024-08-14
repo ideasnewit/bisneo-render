@@ -5,6 +5,9 @@
   "type": "module",
   "author": "naveen",
   "license": "",
+  "engines": {
+    "node": ">=16"
+    },
   "scripts": {
     "build": "rimraf dist && tsc",
     "preserve": "yarn run build",
